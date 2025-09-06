@@ -40,7 +40,7 @@ class ResponseHandler {
     const response: ApiResponse = {
       success: false,
       message,
-      error: typeof error === "string" ? error : z.prettifyError(error),
+      error: error,
       statusCode,
     };
     return res.status(statusCode).json(response);

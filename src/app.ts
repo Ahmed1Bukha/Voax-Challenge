@@ -3,6 +3,8 @@ import express, { Application, Request, Response } from "express";
 import blobRoutes from "./routes/v1/blobRoute";
 import config from "./config";
 import morgan from "morgan";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const app: Application = express();
 const port = config.port;
