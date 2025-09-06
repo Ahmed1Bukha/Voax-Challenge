@@ -14,7 +14,7 @@ class S3AuthenticationError extends Error {
   }
 }
 
-class S3RequestError extends Error {
+export class S3RequestError extends Error {
   public statusCode: number;
 
   constructor(message: string, statusCode: number) {
@@ -258,6 +258,7 @@ export default class S3Service {
       });
 
       req.on("error", (err: Error) => {
+        console.log("Request failed: ", err.message);
         reject(new S3RequestError(`Request failed: ${err.message}`, 0));
       });
 
@@ -287,6 +288,22 @@ export default class S3Service {
   ): Promise<S3Response> {
     const dataBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data, "utf8");
 
+    // Check if key already exists
+    try {
+      const result = await this.headObject(bucket, key);
+      console.log(result);
+      // If headObject succeeds, the key exists
+      console.log("Key already exists");
+      throw new S3RequestError("Key already exists", 409);
+    } catch (error) {
+      // If headObject fails with 404, the key doesn't exist (which is what we want)
+      if (error instanceof S3RequestError && error.statusCode === 404) {
+        console.log("Key does not exist, proceeding with upload");
+      } else {
+        // If it's any other error, re-throw it
+        throw error;
+      }
+    }
     return this.makeRequest({
       method: "PUT",
       bucket,
@@ -296,6 +313,14 @@ export default class S3Service {
         "Content-Type": contentType,
         "Content-Length": dataBuffer.length.toString(),
       },
+    });
+  }
+
+  public async headObject(bucket: string, key: string): Promise<S3Response> {
+    return this.makeRequest({
+      method: "HEAD",
+      bucket,
+      key,
     });
   }
 }

@@ -12,6 +12,9 @@ const config = {
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY as string,
     AWS_REGION: (process.env.AWS_REGION as string) || "us-east-1",
   },
+  database: {
+    dbUrl: process.env.MONGODB_URI as string,
+  },
 };
 
 export default config;

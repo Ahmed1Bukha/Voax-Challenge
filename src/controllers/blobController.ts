@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import blobSchema from "../models/blob";
 import ResponseHandler from "../utils/responseHandler";
-import S3Service from "../services/S3Client";
-import config from "../config";
+import S3Service, { S3RequestError } from "../services/S3Client";
+import config from "../config/config";
 
 export default class BlobController {
   private s3Service: S3Service;
@@ -32,11 +32,12 @@ export default class BlobController {
         return ResponseHandler.failure(res, "Blob not found", 404);
       }
 
-      return ResponseHandler.success(
-        res,
-        blob.data,
-        "Blob retrieved successfully"
-      );
+      return res.json({
+        id: blob.id,
+        data: blob.data,
+        createdAt: blob.createdAt,
+        size: blob.size,
+      });
     } catch (error) {
       return ResponseHandler.failure(res, "Internal server error", 500, error);
     }
@@ -44,16 +45,23 @@ export default class BlobController {
 
   async getBlobFromS3(req: Request, res: Response) {
     try {
-      const key = req.params.key;
-      if (!key) {
+      const id = req.params.id;
+      if (!id) {
         return ResponseHandler.failure(res, "Key is required", 400);
       }
-      const result = await this.s3Service.getObject(config.bucket, key);
-      return ResponseHandler.success(
-        res,
-        result.body,
-        "Blob retrieved successfully"
-      );
+      const result = await this.s3Service.getObject(config.bucket, id);
+      const headers = await this.s3Service.headObject(config.bucket, id);
+      if (!headers.headers["date"]) {
+        return ResponseHandler.failure(res, "Date not found", 404);
+      }
+      const utcIsoString = new Date(headers.headers["date"]).toISOString();
+
+      return res.json({
+        id: id,
+        data: result.body,
+        createdAt: utcIsoString,
+        size: result.body.length,
+      });
     } catch (error) {
       console.log(error);
       return ResponseHandler.failure(res, "Internal server error", 500, error);
@@ -87,6 +95,10 @@ export default class BlobController {
         "Blob created successfully"
       );
     } catch (error) {
+      if (error instanceof S3RequestError) {
+        console.log("Error from S3RequestError");
+        return ResponseHandler.failure(res, error.message, error.statusCode);
+      }
       return ResponseHandler.failure(res, "Internal server error", 500, error);
     }
   }
