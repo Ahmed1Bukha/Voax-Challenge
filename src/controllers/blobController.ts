@@ -3,30 +3,31 @@ import blobSchema from "../models/blob";
 import ResponseHandler from "../utils/responseHandler";
 import S3Service, { S3RequestError } from "../services/S3Client";
 import config from "../config/config";
+import DatabaseServices from "../services/databaseServices";
+import LocalStorage from "../services/localStorage";
 
 export default class BlobController {
   private s3Service: S3Service;
+  private databaseServices: DatabaseServices;
+  private localStorage: LocalStorage;
   constructor() {
     this.s3Service = new S3Service({
       accessKeyId: config.AWS.AWS_ACCESS_KEY_ID,
       secretAccessKey: config.AWS.AWS_SECRET_ACCESS_KEY,
       region: config.AWS.AWS_REGION,
     });
+    this.databaseServices = new DatabaseServices();
+    this.localStorage = new LocalStorage();
   }
 
-  async getBlob(req: Request, res: Response) {
+  async getBlobFromDatabase(req: Request, res: Response) {
     try {
       const id = req.params.id;
       if (!id) {
         return ResponseHandler.failure(res, "Id is required", 400);
       }
 
-      const blob = blobSchema.parse({
-        id,
-        data: Buffer.from("8239u423t2uior").toString("base64"),
-        createdAt: new Date(),
-        size: 100,
-      });
+      const blob = await this.databaseServices.getBlob(id);
 
       if (!blob) {
         return ResponseHandler.failure(res, "Blob not found", 404);
@@ -38,6 +39,29 @@ export default class BlobController {
         createdAt: blob.createdAt,
         size: blob.size,
       });
+    } catch (error) {
+      return ResponseHandler.failure(res, "Internal server error", 500, error);
+    }
+  }
+
+  async createBlobInDatabase(req: Request, res: Response) {
+    try {
+      const data = req.body;
+      const blob = blobSchema.safeParse({
+        ...data,
+        size: data.data.length,
+      });
+
+      if (!blob.success) {
+        return ResponseHandler.failure(
+          res,
+          "Blob values are invalid",
+          400,
+          blob.error
+        );
+      }
+      const result = await this.databaseServices.createBlob(blob.data);
+      return ResponseHandler.success(res, result, "Blob created successfully");
     } catch (error) {
       return ResponseHandler.failure(res, "Internal server error", 500, error);
     }
@@ -103,14 +127,14 @@ export default class BlobController {
     }
   }
 
-  async createBlob(req: Request, res: Response) {
+  async saveBlobToLocalStorage(req: Request, res: Response) {
     try {
       const data = req.body;
+      const chosenPath = req.query.path as string;
       const blob = blobSchema.safeParse({
         ...data,
         size: data.data.length,
       });
-
       if (!blob.success) {
         return ResponseHandler.failure(
           res,
@@ -119,13 +143,29 @@ export default class BlobController {
           blob.error
         );
       }
-
-      return ResponseHandler.success(
-        res,
+      const result = await this.localStorage.saveFileBlob(
         blob.data,
-        "Blob created successfully",
-        201
+        chosenPath
       );
+      return ResponseHandler.success(res, result, "Blob saved successfully");
+    } catch (error) {
+      return ResponseHandler.failure(res, "Internal server error", 500, error);
+    }
+  }
+  async getBlobFromLocalStorage(req: Request, res: Response) {
+    try {
+      const id = req.params.id;
+      if (!id) {
+        return ResponseHandler.failure(res, "Key is required", 400);
+      }
+      const chosenPath = req.query.path as string;
+      const result = await this.localStorage.getFileBlob(id, chosenPath);
+      return res.json({
+        id: result?.id,
+        data: result?.data,
+        createdAt: result?.createdAt,
+        size: result?.size,
+      });
     } catch (error) {
       return ResponseHandler.failure(res, "Internal server error", 500, error);
     }

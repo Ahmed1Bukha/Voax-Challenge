@@ -28,8 +28,16 @@ export const saveBlobActivity = async (
 
 const captureBlobActivity = async (req: Request, res: Response) => {
   try {
+    const blobId = req.params.id || req.params.blobId;
+
+    // Skip activity logging if no blobId is available
+    if (!blobId) {
+      console.log("No blobId found in request, skipping activity logging");
+      return;
+    }
+
     const blobActivity: BlobActivityModel = {
-      blobId: req.params.id || req.params.blobId || "",
+      blobId: blobId,
       action: req.method,
       success: res.statusCode >= 200 && res.statusCode < 300,
       metadata: {
