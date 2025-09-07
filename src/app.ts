@@ -12,6 +12,8 @@ const app: Application = express();
 const port = config.port;
 connectDB();
 
+console.log(config.storageType);
+
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(`/${config.versions.v1}/blobs`, blobRoutes);

@@ -1,9 +1,11 @@
 import * as dotenv from "dotenv";
+import { StorageType } from "../utils/enums/storageEnums";
 dotenv.config();
 
 const config = {
   port: process.env.PORT || 3000,
   bucket: process.env.BUCKET as string,
+  storageType: process.env.STORAGE_TYPE as StorageType,
   versions: {
     v1: "v1",
   },

@@ -5,7 +5,9 @@ import S3Service, { S3RequestError } from "../services/S3Client";
 import config from "../config/config";
 import DatabaseServices from "../services/databaseServices";
 import LocalStorage from "../services/localStorage";
-
+import { StorageType } from "../utils/enums/storageEnums";
+import { blobMetadataModel } from "../schema/blobMetadataSchema";
+import { BlobMetadataModel } from "../models/blobMetadata";
 export default class BlobController {
   private s3Service: S3Service;
   private databaseServices: DatabaseServices;
@@ -61,6 +63,12 @@ export default class BlobController {
         );
       }
       const result = await this.databaseServices.createBlob(blob.data);
+      await this.saveBlobMetaData(
+        blob.data.id,
+        config.storageType,
+        blob.data.size ?? 0,
+        blob.data.createdAt
+      );
       return ResponseHandler.success(res, result, "Blob created successfully");
     } catch (error) {
       return ResponseHandler.failure(res, "Internal server error", 500, error);
@@ -113,6 +121,12 @@ export default class BlobController {
         blob.data.id,
         blob.data.data
       );
+      await this.saveBlobMetaData(
+        blob.data.id,
+        config.storageType,
+        blob.data.size ?? 0,
+        blob.data.createdAt
+      );
       return ResponseHandler.success(
         res,
         result.body,
@@ -147,6 +161,12 @@ export default class BlobController {
         blob.data,
         chosenPath
       );
+      await this.saveBlobMetaData(
+        blob.data.id,
+        config.storageType,
+        blob.data.size ?? 0,
+        blob.data.createdAt
+      );
       return ResponseHandler.success(res, result, "Blob saved successfully");
     } catch (error) {
       return ResponseHandler.failure(res, "Internal server error", 500, error);
@@ -168,6 +188,30 @@ export default class BlobController {
       });
     } catch (error) {
       return ResponseHandler.failure(res, "Internal server error", 500, error);
+    }
+  }
+
+  private async saveBlobMetaData(
+    id: string,
+    storageType: StorageType,
+    size: number,
+    createdAt: Date
+  ) {
+    try {
+      const blobMetaData: BlobMetadataModel = new blobMetadataModel({
+        id: id,
+        storageType: storageType,
+        metadata: {
+          size: size,
+          createdAt: createdAt,
+        },
+      });
+      const savedBlobMetaData = await this.databaseServices.saveBlobMetaData(
+        blobMetaData
+      );
+      return savedBlobMetaData;
+    } catch (error) {
+      throw error;
     }
   }
 }

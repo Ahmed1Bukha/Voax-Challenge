@@ -1,8 +1,10 @@
 import config from "../config/config";
 import { BlobModel } from "../models/blob";
 import { BlobActivityModel } from "../models/blobActivity";
+import { BlobMetadataModel } from "../models/blobMetadata";
 import { blobActivityModel } from "../schema/blobActivirySchema";
 import { blobModel } from "../schema/blobSchema";
+import { blobMetadataModel } from "../schema/blobMetadataSchema";
 
 export default class DatabaseServices {
   constructor() {}
@@ -25,6 +27,12 @@ export default class DatabaseServices {
     });
     const savedBlob = await newBlob.save();
     return savedBlob;
+  }
+
+  async saveBlobMetaData(blobMetaData: BlobMetadataModel) {
+    const newBlobMetaData = new blobMetadataModel(blobMetaData);
+    const savedBlobMetaData = await newBlobMetaData.save();
+    return savedBlobMetaData;
   }
 
   async getBlob(id: string) {
