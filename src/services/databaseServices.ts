@@ -5,6 +5,8 @@ import { BlobMetadataModel } from "../models/blobMetadata";
 import { blobActivityModel } from "../schema/blobActivirySchema";
 import { blobModel } from "../schema/blobSchema";
 import { blobMetadataModel } from "../schema/blobMetadataSchema";
+import { userModel } from "../schema/userSchema";
+import { UserModel } from "../models/user";
 
 export default class DatabaseServices {
   constructor() {}
@@ -40,5 +42,16 @@ export default class DatabaseServices {
       id: id,
     });
     return blob;
+  }
+
+  async getUserByEmail(email: string): Promise<UserModel | null> {
+    const user = await userModel.findOne({ email: email });
+    return user;
+  }
+
+  async createUser(user: UserModel): Promise<UserModel> {
+    const newUser = new userModel(user);
+    const savedUser = await newUser.save();
+    return savedUser;
   }
 }

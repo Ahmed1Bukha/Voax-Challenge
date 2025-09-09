@@ -17,6 +17,9 @@ const config = {
   database: {
     dbUrl: process.env.MONGODB_URI as string,
   },
+  SESSION: {
+    SESSION_SECRET: process.env.SESSION_SECRET as string,
+  },
 };
 
 export default config;

@@ -45,3 +45,4 @@ if (require.main === module) {
 }
 
 module.exports = { testMiddleware };
+
